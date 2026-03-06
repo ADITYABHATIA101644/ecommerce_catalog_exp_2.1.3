@@ -39,28 +39,71 @@ const Product = mongoose.model('Product', productSchema);
 
 // 3. ROUTES
 
-// Root Route
-app.get('/', (req, res) => {
-    res.send("<h1>E-commerce API is Live!</h1><p>Use /experiment-output to see the results.</p>");
+/**
+ * HOMEPAGE: Matches your UI Screenshot
+ * Displays products in a styled list.
+ */
+app.get('/', async (req, res) => {
+    try {
+        const products = await Product.find({});
+        
+        let htmlContent = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Ecommerce Catalog</title>
+            <style>
+                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; background-color: #fff; color: #333; }
+                h1 { font-size: 28px; margin-bottom: 30px; font-weight: bold; }
+                .product-card { border: 1px solid #eee; padding: 25px; margin-bottom: 25px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+                .product-name { font-size: 22px; font-weight: bold; margin: 0 0 15px 0; }
+                .detail { margin: 8px 0; font-size: 16px; color: #444; }
+                .nav-links { margin-top: 40px; padding: 20px; background: #f9f9f9; border-radius: 5px; }
+                a { color: #007bff; text-decoration: none; margin-right: 15px; }
+                a:hover { text-decoration: underline; }
+            </style>
+        </head>
+        <body>
+            <h1>Ecommerce Catalog</h1>
+            ${products.length > 0 ? products.map(p => `
+                <div class="product-card">
+                    <div class="product-name">${p.name}</div>
+                    <p class="detail">Category: ${p.category}</p>
+                    <p class="detail">Avg Rating: ${p.avgRating}</p>
+                </div>
+            `).join('') : '<p>No products found. Please seed your database.</p>'}
+
+            <div class="nav-links">
+                <strong>API Endpoints:</strong>
+                <a href="/api/products">Raw JSON</a>
+                <a href="/aggregation/low-stock">Low Stock Aggregation</a>
+                <a href="/aggregation/category-ratings">Category Ratings Aggregation</a>
+            </div>
+        </body>
+        </html>`;
+
+        res.send(htmlContent);
+    } catch (err) {
+        res.status(500).send("Error loading catalog: " + err.message);
+    }
 });
 
 /**
- * OBJECTIVE: Expected Output for Experiment 2.1.3
- * Returns the "Premium Headphones" document structure.
+ * RAW JSON DATA: For verification
  */
-app.get('/experiment-output', async (req, res) => {
+app.get('/api/products', async (req, res) => {
     try {
-        const product = await Product.findOne({ name: "Premium Headphones" }).select('-_id -__v');
-        if (!product) return res.status(404).json({ message: "Product not found. Did you run the seed script?" });
-        res.json(product);
+        const products = await Product.find({});
+        res.json(products);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
 /**
- * OBJECTIVE: Aggregation Result (Image 1 - Low Stock)
- * Finds products where a variant's stock is less than 5.
+ * AGGREGATION: Low Stock (Targeting Image 1)
  */
 app.get('/aggregation/low-stock', async (req, res) => {
     try {
@@ -82,8 +125,7 @@ app.get('/aggregation/low-stock', async (req, res) => {
 });
 
 /**
- * OBJECTIVE: Aggregation Result (Image 2 & 3 - Category Ratings)
- * Calculates average rating per category.
+ * AGGREGATION: Category Ratings (Targeting Image 2 & 3)
  */
 app.get('/aggregation/category-ratings', async (req, res) => {
     try {
